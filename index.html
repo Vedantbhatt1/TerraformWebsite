@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS Infrastructure with Terraform</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- highlight.js CSS for a dark theme (vs2015) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/vs2015.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            /* Light gray background */
+        }
+
+        .container {
+            max-width: 1200px;
+        }
+
+        /* New styles for the code editor window */
+        .code-editor-window {
+            background-color: #1e1e1e;
+            /* Darker gray for code blocks - adjusted for vs2015 theme */
+            border-radius: 0.5rem;
+            overflow: hidden;
+            /* Ensures rounded corners apply to content */
+            margin-bottom: 1.5rem;
+            /* Add some space below each block */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .code-editor-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            background-color: #2d2d30;
+            /* Slightly lighter dark gray for header */
+            border-top-left-radius: 0.5rem;
+            border-top-right-radius: 0.5rem;
+        }
+
+        .window-controls {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .dot.red {
+            background-color: #ef4444;
+        }
+
+        /* Tailwind red-500 */
+        .dot.yellow {
+            background-color: #f59e0b;
+        }
+
+        /* Tailwind yellow-500 */
+        .dot.green {
+            background-color: #10b981;
+        }
+
+        /* Tailwind green-500 */
+
+        .copy-button {
+            background-color: #4f46e5;
+            /* Tailwind indigo-600 */
+            color: white;
+            padding: 0.4rem 0.8rem;
+            border-radius: 0.375rem;
+            /* rounded-md */
+            font-size: 0.875rem;
+            /* text-sm */
+            font-weight: 600;
+            /* font-semibold */
+            cursor: pointer;
+            border: none;
+            transition: background-color 0.2s ease-in-out;
+        }
+
+        .copy-button:hover {
+            background-color: #4338ca;
+            /* Tailwind indigo-700 */
+        }
+
+        /* Adjust pre to remove its own border-radius and background as it's now handled by the container */
+        pre {
+            background-color: transparent;
+            /* Handled by .code-editor-window */
+            border-radius: 0;
+            /* Handled by .code-editor-window */
+            padding-top: 0;
+            /* Adjust padding as header adds space */
+            margin-top: 0;
+            /* Remove default top margin */
+            overflow-x: auto;
+            /* Added for horizontal scroll */
+        }
+
+        /* Override highlight.js default blue color for text within code blocks */
+        pre code {
+            color: #D4D4D4 !important;
+            /* Set a light gray color and use !important to override highlight.js */
+        }
+
+        /* Specific highlight.js classes can be targeted for more granular control if needed */
+        /* For example, to change comment color: */
+        .hljs-comment {
+            color: #888888 !important;
+            /* A slightly darker gray for comments */
+        }
+
+        /* To change keyword color (like 'resource', 'provider'): */
+        .hljs-keyword {
+            color: #569CD6 !important;
+            /* A different color for keywords */
+        }
+
+        /* To change string color (like "us-east-1"): */
+        .hljs-string {
+            color: #CE9178 !important;
+            /* A different color for strings */
+        }
+
+        code {
+            font-family: 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', monospace;
+            background-color: transparent;
+            /* Removed background color for inline code */
+            padding: 0;
+            /* Removed padding for inline code */
+            border-radius: 0;
+            /* Removed border-radius for inline code */
+            color: #374151;
+            /* Darker text for inline code (default body text color) */
+            font-weight: 600;
+            /* Made inline code slightly bolder for distinction */
+        }
+
+        .section-header {
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .screenshot-description {
+            background-color: #d1fae5;
+            /* Light green for screenshot descriptions */
+            border-left: 4px solid #34d399;
+            /* Green border */
+            padding: 1rem;
+            margin-top: 1rem;
+            border-radius: 0.5rem;
+            color: #065f46;
+            /* Dark green text */
+        }
+
+        .security-warning {
+            background-color: #fee2e2;
+            /* Tailwind red-100 */
+            border-left: 4px solid #ef4444;
+            /* Tailwind red-500 */
+            padding: 1rem;
+            margin-top: 1rem;
+            border-radius: 0.5rem;
+            color: #991b1b;
+            /* Tailwind red-800 */
+            font-weight: 600;
+        }
+
+        .explanation-section-style {
+            background-color: #fdfdfd;
+            /* Pale white */
+            color: #333333;
+            /* Dark text */
+            padding: 1.5rem;
+            /* More padding for a block look */
+            border-radius: 0.5rem;
+            margin-top: 1.5rem;
+            /* Space from previous code block */
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            /* Subtle shadow */
+        }
+
+        .explanation-section-style ul {
+            list-style-type: disc;
+            margin-left: 1.5rem;
+            /* Standard indent */
+        }
+
+        .explanation-section-style ul li {
+            margin-bottom: 0.5rem;
+        }
+
+        .explanation-section-style code {
+            color: #c2410c;
+            /* A distinct color for inline code within explanations, like Tailwind orange-700 */
+            background-color: #fef3c7;
+            /* Light yellow background for inline code */
+            padding: 0.2em 0.4em;
+            border-radius: 0.25rem;
+        }
+
+        .service-card {
+            background-color: #ffffff;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+            cursor: pointer;
+        }
+
+        .service-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+    </style>
+</head>
+
+<body class="text-gray-800">
+    <nav class="bg-gradient-to-r from-blue-600 to-indigo-700 p-4 shadow-lg">
+        <div class="container mx-auto flex flex-col md:flex-row justify-between items-center">
+            <a href="index.html"
+                class="text-white text-2xl font-bold rounded-md p-2 hover:bg-blue-700 transition duration-300 mb-2 md:mb-0">AWS
+                Terraform Guide</a>
+            <div class="flex flex-wrap justify-center gap-2 md:flex-row md:space-x-4 md:space-y-0">
+                <a href="index.html#introduction"
+                    class="text-white hover:text-blue-200 transition duration-300 rounded-md p-2 hover:bg-blue-700 text-center">Introduction</a>
+                <a href="index.html#configure-aws"
+                    class="text-white hover:text-blue-200 transition duration-300 rounded-md p-2 hover:bg-blue-700 text-center">Configure
+                    AWS</a>
+                <a href="s3.html"
+                    class="text-white hover:text-blue-200 transition duration-300 rounded-md p-2 hover:bg-blue-700 text-center">AWS
+                    S3</a>
+                <a href="vpc.html"
+                    class="text-white hover:text-blue-200 transition duration-300 rounded-md p-2 hover:bg-blue-700 text-center">AWS
+                    VPC</a>
+                <a href="ec2.html"
+                    class="text-white hover:text-blue-200 transition duration-300 rounded-md p-2 hover:bg-blue-700 text-center">AWS
+                    EC2</a>
+                <a href="workflow.html"
+                    class="text-white hover:text-blue-200 transition duration-300 rounded-md p-2 hover:bg-blue-700 text-center">Workflow</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="bg-gray-200 py-2 text-center text-gray-700 text-sm">
+        <p>Created by: <strong>Vedant Bhatt</strong> | Registration No: <strong>12221368</strong></p>
+    </div>
+
+    <div class="container mx-auto px-4 py-6 mt-8 bg-white rounded-lg shadow-xl sm:px-6 lg:px-8">
+        <section id="introduction" class="mb-12">
+            <h1 class="text-4xl font-extrabold text-indigo-800 mb-6 section-header">Mastering AWS Infrastructure with
+                Terraform</h1>
+            <p class="text-lg leading-relaxed mb-4">
+                Welcome to this comprehensive guide on provisioning AWS cloud infrastructure using Terraform. Terraform
+                is an open-source Infrastructure as Code (IaC) tool that allows you to define and provision datacenter
+                infrastructure using a declarative configuration language. This means you describe the desired state of
+                your infrastructure, and Terraform figures out how to achieve it.
+            </p>
+            <p class="text-lg leading-relaxed">
+                Using Terraform offers numerous benefits, including:
+            </p>
+            <ul class="list-disc list-inside ml-4 text-lg leading-relaxed mb-6">
+                <li><strong>Automation:</strong> Automate the creation, modification, and destruction of infrastructure.
+                </li>
+                <li><strong>Consistency:</strong> Ensure consistent environments across development, staging, and
+                    production.</li>
+                <li><strong>Version Control:</strong> Manage infrastructure configurations in version control systems
+                    like Git.</li>
+                <li><strong>Reusability:</strong> Create reusable modules for common infrastructure patterns.</li>
+                <li><strong>Cost Optimization:</strong> Easily track and manage resources to prevent resource sprawl.
+                </li>
+            </ul>
+            <p class="text-lg leading-relaxed">
+                In this guide, we will walk through setting up AWS S3 buckets, Virtual Private Clouds (VPCs), and EC2
+                instances using Terraform.
+            </p>
+        </section>
+
+        <section id="prerequisites" class="mb-12">
+            <h2 class="text-3xl font-bold text-blue-700 mb-4 section-header">Prerequisites</h2>
+            <p class="text-lg leading-relaxed mb-4">Before you begin, ensure you have the following installed and
+                configured:</p>
+            <ul class="list-disc list-inside ml-4 text-lg leading-relaxed">
+                <li><strong>AWS Account:</strong> An active AWS account with administrative access.</li>
+                <li><strong>AWS CLI:</strong> Configured with your AWS access key ID and secret access key. You can
+                    configure it using <code>aws configure</code>.</li>
+                <li><strong>Terraform:</strong> Installed on your local machine. You can download it from the <a
+                        href="https://www.terraform.io/downloads.html" target="_blank"
+                        class="text-blue-600 hover:underline">official Terraform website</a>.</li>
+            </ul>
+        </section>
+
+        <section id="configure-aws" class="mb-12">
+            <h2 class="text-3xl font-bold text-blue-700 mb-4 section-header">Configuring AWS for Terraform</h2>
+            <div class="security-warning">
+                <p class="font-bold text-lg mb-2">⚠️ SECURITY WARNING: DO NOT HARDCODE CREDENTIALS!</p>
+                <p>Never embed your AWS Access Key ID and Secret Access Key directly into your Terraform configuration
+                    files, any public code, or client-side applications. Doing so exposes your AWS account to severe
+                    security risks, including unauthorized access, data theft, and financial fraud.</p>
+                <p class="mt-2">Always use secure methods like AWS CLI configuration, IAM Roles, or environment
+                    variables to provide credentials to Terraform.</p>
+            </div>
+            <p class="text-lg leading-relaxed mb-4 mt-4">
+                Terraform needs credentials to interact with your AWS account. The most secure and recommended method
+                for local development is to use the AWS Command Line Interface (CLI) configuration.
+            </p>
+
+            <h3 class="text-2xl font-semibold text-gray-700 mb-3">Step 1: Install AWS CLI</h3>
+            <p class="text-lg leading-relaxed mb-4">
+                If you haven't already, install the AWS CLI on your operating system. You can find detailed instructions
+                on the official AWS documentation:
+                <a href="https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html" target="_blank"
+                    class="text-blue-600 hover:underline">Install the AWS CLI</a>.
+            </p>
+
+            <h3 class="text-2xl font-semibold text-gray-700 mb-3">Step 2: Configure AWS CLI</h3>
+            <p class="text-lg leading-relaxed mb-4">
+                Once the AWS CLI is installed, open your terminal or command prompt and run the following command:
+            </p>
+            <div class="code-editor-window">
+                <div class="code-editor-header">
+                    <div class="window-controls">
+                        <span class="dot red"></span>
+                        <span class="dot yellow"></span>
+                        <span class="dot green"></span>
+                    </div>
+                    <button class="copy-button" onclick="copyCode(this)">Copy Code</button>
+                </div>
+                <pre><code class="language-bash">aws configure</code></pre>
+            </div>
+            <p class="text-lg leading-relaxed mt-4 mb-4">
+                You will be prompted to enter the following information:
+            </p>
+            <ul class="list-disc list-inside ml-4 text-lg leading-relaxed mb-4">
+                <li><strong>AWS Access Key ID:</strong> This is a unique identifier for your AWS account.</li>
+                <li><strong>AWS Secret Access Key:</strong> This is the secret key associated with your Access Key ID.
+                    Treat this like a password.</li>
+                <li><strong>Default region name:</strong> The AWS region you want to use by default (e.g.,
+                    <code>us-east-1</code>, <code>ap-south-1</code>). Terraform will use this region if not explicitly
+                    specified in your `provider` block.</li>
+                <li><strong>Default output format:</strong> You can choose <code>json</code>, <code>yaml</code>, or
+                    <code>text</code>. <code>json</code> is a common choice.</li>
+            </ul>
+            <p class="text-lg leading-relaxed mb-4">
+                **Example of the prompts and your input:**
+            </p>
+            <div class="code-editor-window">
+                <div class="code-editor-header">
+                    <div class="window-controls">
+                        <span class="dot red"></span>
+                        <span class="dot yellow"></span>
+                        <span class="dot green"></span>
+                    </div>
+                    <button class="copy-button" onclick="copyCode(this)">Copy Code</button>
+                </div>
+                <pre><code class="language-bash">
+AWS Access Key ID [None]: AKIAIOSFODNN7EXAMPLE
+AWS Secret Access Key [None]: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+Default region name [None]: us-east-1
+Default output format [None]: json
+                </code></pre>
+            </div>
+            <p class="text-lg leading-relaxed mt-4">
+                After you provide this information, the AWS CLI saves your credentials in a file (usually
+                `~/.aws/credentials` on Linux/macOS or `%USERPROFILE%\.aws/credentials` on Windows) and your default
+                region in `~/.aws/config`. Terraform automatically looks for credentials in these default locations.
+            </p>
+            <p class="text-lg leading-relaxed">
+                This setup allows Terraform to authenticate with your AWS account securely without you needing to embed
+                sensitive information directly into your Terraform configuration files.
+            </p>
+        </section>
+
+        <section id="aws-services" class="mb-12">
+            <h2 class="text-3xl font-bold text-blue-700 mb-6 section-header">Explore AWS Services with Terraform</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
+                <!-- S3 Card -->
+                <div class="service-card p-6 flex flex-col items-center text-center">
+                    <h3 class="text-2xl font-semibold text-gray-800 mb-3">AWS S3 (Simple Storage Service)</h3>
+                    <p class="text-lg leading-relaxed text-gray-700 mb-4">
+                        Learn how to provision and manage highly scalable object storage using Terraform. Discover how
+                        S3 can store and retrieve any amount of data.
+                    </p>
+                    <a href="s3.html"
+                        class="mt-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition duration-300 transform hover:scale-105">
+                        Learn More about S3
+                    </a>
+                </div>
+
+                <!-- VPC Card -->
+                <div class="service-card p-6 flex flex-col items-center text-center">
+                    <h3 class="text-2xl font-semibold text-gray-800 mb-3">AWS VPC (Virtual Private Cloud)</h3>
+                    <p class="text-lg leading-relaxed text-gray-700 mb-4">
+                        Understand how to define and launch AWS resources into your own isolated virtual network. Set up
+                        subnets, internet gateways, and route tables.
+                    </p>
+                    <a href="vpc.html"
+                        class="mt-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition duration-300 transform hover:scale-105">
+                        Learn More about VPC
+                    </a>
+                </div>
+
+                <!-- EC2 Card -->
+                <div class="service-card p-6 flex flex-col items-center text-center">
+                    <h3 class="text-2xl font-semibold text-gray-800 mb-3">AWS EC2 (Elastic Compute Cloud)</h3>
+                    <p class="text-lg leading-relaxed text-gray-700 mb-4">
+                        Provision scalable computing capacity in the AWS cloud. Learn to launch instances, configure
+                        security groups, and attach key pairs.
+                    </p>
+                    <a href="ec2.html"
+                        class="mt-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition duration-300 transform hover:scale-105">
+                        Learn More about EC2
+                    </a>
+                </div>
+
+                <!-- Workflow Card -->
+                <div class="service-card p-6 flex flex-col items-center text-center">
+                    <h3 class="text-2xl font-semibold text-gray-800 mb-3">Terraform Workflow</h3>
+                    <p class="text-lg leading-relaxed text-gray-700 mb-4">
+                        Master the essential Terraform commands: `init`, `plan`, `apply`, and `destroy`. Understand the
+                        lifecycle of infrastructure as code.
+                    </p>
+                    <a href="workflow.html"
+                        class="mt-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition duration-300 transform hover:scale-105">
+                        Learn More about Workflow
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <section id="conclusion" class="mb-8">
+            <h2 class="text-3xl font-bold text-blue-700 mb-4 section-header">Conclusion</h2>
+            <p class="text-lg leading-relaxed mb-4">
+                You've now learned the basics of provisioning AWS S3 buckets, VPCs, and EC2 instances using Terraform.
+                This is just the beginning of what you can achieve with Infrastructure as Code. Terraform's declarative
+                nature and extensive provider ecosystem make it an invaluable tool for managing cloud infrastructure
+                efficiently and reliably.
+            </p>
+            <p class="text-lg leading-relaxed">
+                Experiment with different resource types, explore Terraform modules, and continue building your cloud
+                automation skills!
+            </p>
+        </section>
+    </div>
+
+    <!-- highlight.js library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <!-- Include HCL language definition -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/hcl.min.js"></script>
+    <script>
+        // Function to copy code to clipboard
+        function copyCode(button) {
+            const codeBlock = button.closest('.code-editor-window').querySelector('code');
+            const textToCopy = codeBlock.innerText;
+
+            // Use a temporary textarea to copy text to clipboard
+            const tempTextArea = document.createElement('textarea');
+            tempTextArea.value = textToCopy;
+            document.body.appendChild(tempTextArea);
+            tempTextArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempTextArea);
+
+            // Provide feedback to the user
+            const originalText = button.textContent;
+            button.textContent = 'Copied!';
+            setTimeout(() => {
+                button.textContent = originalText;
+            }, 2000);
+        }
+
+        // Initialize highlight.js after the DOM is loaded
+        document.addEventListener('DOMContentLoaded', (event) => {
+            hljs.highlightAll();
+        });
+    </script>
+</body>
+
+</html>

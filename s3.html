@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS S3 with Terraform</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- highlight.js CSS for a dark theme (vs2015) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/vs2015.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            /* Light gray background */
+        }
+
+        .container {
+            max-width: 1200px;
+        }
+
+        /* New styles for the code editor window */
+        .code-editor-window {
+            background-color: #1e1e1e;
+            /* Darker gray for code blocks - adjusted for vs2015 theme */
+            border-radius: 0.5rem;
+            overflow: hidden;
+            /* Ensures rounded corners apply to content */
+            margin-bottom: 1.5rem;
+            /* Add some space below each block */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .code-editor-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            background-color: #2d2d30;
+            /* Slightly lighter dark gray for header */
+            border-top-left-radius: 0.5rem;
+            border-top-right-radius: 0.5rem;
+        }
+
+        .window-controls {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .dot.red {
+            background-color: #ef4444;
+        }
+
+        /* Tailwind red-500 */
+        .dot.yellow {
+            background-color: #f59e0b;
+        }
+
+        /* Tailwind yellow-500 */
+        .dot.green {
+            background-color: #10b981;
+        }
+
+        /* Tailwind green-500 */
+
+        .copy-button {
+            background-color: #4f46e5;
+            /* Tailwind indigo-600 */
+            color: white;
+            padding: 0.4rem 0.8rem;
+            border-radius: 0.375rem;
+            /* rounded-md */
+            font-size: 0.875rem;
+            /* text-sm */
+            font-weight: 600;
+            /* font-semibold */
+            cursor: pointer;
+            border: none;
+            transition: background-color 0.2s ease-in-out;
+        }
+
+        .copy-button:hover {
+            background-color: #4338ca;
+            /* Tailwind indigo-700 */
+        }
+
+        /* Adjust pre to remove its own border-radius and background as it's now handled by the container */
+        pre {
+            background-color: transparent;
+            /* Handled by .code-editor-window */
+            border-radius: 0;
+            /* Handled by .code-editor-window */
+            padding-top: 0;
+            /* Adjust padding as header adds space */
+            margin-top: 0;
+            /* Remove default top margin */
+            overflow-x: auto;
+            /* Added for horizontal scroll */
+        }
+
+        /* Override highlight.js default blue color for text within code blocks */
+        pre code {
+            color: #D4D4D4 !important;
+            /* Set a light gray color and use !important to override highlight.js */
+        }
+
+        /* Specific highlight.js classes can be targeted for more granular control if needed */
+        /* For example, to change comment color: */
+        .hljs-comment {
+            color: #888888 !important;
+            /* A slightly darker gray for comments */
+        }
+
+        /* To change keyword color (like 'resource', 'provider'): */
+        .hljs-keyword {
+            color: #569CD6 !important;
+            /* A different color for keywords */
+        }
+
+        /* To change string color (like "us-east-1"): */
+        .hljs-string {
+            color: #CE9178 !important;
+            /* A different color for strings */
+        }
+
+        code {
+            font-family: 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', monospace;
+            background-color: transparent;
+            /* Removed background color for inline code */
+            padding: 0;
+            /* Removed padding for inline code */
+            border-radius: 0;
+            /* Removed border-radius for inline code */
+            color: #374151;
+            /* Darker text for inline code (default body text color) */
+            font-weight: 600;
+            /* Made inline code slightly bolder for distinction */
+        }
+
+        .section-header {
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .screenshot-description {
+            background-color: #d1fae5;
+            /* Light green for screenshot descriptions */
+            border-left: 4px solid #34d399;
+            /* Green border */
+            padding: 1rem;
+            margin-top: 1rem;
+            border-radius: 0.5rem;
+            color: #065f46;
+            /* Dark green text */
+        }
+
+        .security-warning {
+            background-color: #fee2e2;
+            /* Tailwind red-100 */
+            border-left: 4px solid #ef4444;
+            /* Tailwind red-500 */
+            padding: 1rem;
+            margin-top: 1rem;
+            border-radius: 0.5rem;
+            color: #991b1b;
+            /* Tailwind red-800 */
+            font-weight: 600;
+        }
+
+        .explanation-section-style {
+            background-color: #fdfdfd;
+            /* Pale white */
+            color: #333333;
+            /* Dark text */
+            padding: 1.5rem;
+            /* More padding for a block look */
+            border-radius: 0.5rem;
+            margin-top: 1.5rem;
+            /* Space from previous code block */
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            /* Subtle shadow */
+        }
+
+        .explanation-section-style ul {
+            list-style-type: disc;
+            margin-left: 1.5rem;
+            /* Standard indent */
+        }
+
+        .explanation-section-style ul li {
+            margin-bottom: 0.5rem;
+        }
+
+        .explanation-section-style code {
+            color: #c2410c;
+            /* A distinct color for inline code within explanations, like Tailwind orange-700 */
+            background-color: #fef3c7;
+            /* Light yellow background for inline code */
+            padding: 0.2em 0.4em;
+            border-radius: 0.25rem;
+        }
+    </style>
+</head>
+
+<body class="text-gray-800">
+    <nav class="bg-gradient-to-r from-blue-600 to-indigo-700 p-4 shadow-lg">
+        <div class="container mx-auto flex flex-col md:flex-row justify-between items-center">
+            <a href="index.html"
+                class="text-white text-2xl font-bold rounded-md p-2 hover:bg-blue-700 transition duration-300 mb-2 md:mb-0">AWS
+                Terraform Guide</a>
+            <div class="flex flex-wrap justify-center gap-2 md:flex-row md:space-x-4 md:space-y-0">
+                <a href="index.html#introduction"
+                    class="text-white hover:text-blue-200 transition duration-300 rounded-md p-2 hover:bg-blue-700 text-center">Introduction</a>
+                <a href="index.html#configure-aws"
+                    class="text-white hover:text-blue-200 transition duration-300 rounded-md p-2 hover:bg-blue-700 text-center">Configure
+                    AWS</a>
+                <a href="s3.html"
+                    class="text-white hover:text-blue-200 transition duration-300 rounded-md p-2 hover:bg-blue-700 text-center">AWS
+                    S3</a>
+                <a href="vpc.html"
+                    class="text-white hover:text-blue-200 transition duration-300 rounded-md p-2 hover:bg-blue-700 text-center">AWS
+                    VPC</a>
+                <a href="ec2.html"
+                    class="text-white hover:text-blue-200 transition duration-300 rounded-md p-2 hover:bg-blue-700 text-center">AWS
+                    EC2</a>
+                <a href="workflow.html"
+                    class="text-white hover:text-blue-200 transition duration-300 rounded-md p-2 hover:bg-blue-700 text-center">Workflow</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="bg-gray-200 py-2 text-center text-gray-700 text-sm">
+        <p>Created by: <strong>Vedant Bhatt</strong> | Registration No: <strong>12221368</strong></p>
+    </div>
+
+    <div class="container mx-auto px-4 py-6 mt-8 bg-white rounded-lg shadow-xl sm:px-6 lg:px-8">
+        <section id="s3" class="mb-12">
+            <h1 class="text-4xl font-extrabold text-indigo-800 mb-6 section-header">AWS S3 (Simple Storage Service)
+            </h1>
+            <p class="text-lg leading-relaxed mb-4">
+                Amazon S3 is an object storage service offering industry-leading scalability, data availability,
+                security, and performance. You can use S3 to store and retrieve any amount of data at any time, from
+                anywhere on the web.
+            </p>
+            <h2 class="text-3xl font-bold text-blue-700 mb-3">Terraform Code for S3 Bucket</h2>
+            <p class="text-lg leading-relaxed mb-4">
+                Create a file named <code>main.tf</code> and add the following code:
+            </p>
+            <div class="code-editor-window">
+                <div class="code-editor-header">
+                    <div class="window-controls">
+                        <span class="dot red"></span>
+                        <span class="dot yellow"></span>
+                        <span class="dot green"></span>
+                    </div>
+                    <button class="copy-button" onclick="copyCode(this)">Copy Code</button>
+                </div>
+                <pre><code class="language-hcl">
+# Configure the AWS Provider
+provider "aws" {
+  region = "us-east-1" # You can change this to your desired AWS region
+}
+
+# Create an S3 bucket
+resource "aws_s3_bucket" "my_terraform_bucket" {
+  bucket = "my-unique-terraform-bucket-1234567890" # IMPORTANT: Bucket names must be globally unique
+  acl    = "private" # Access Control List: private, public-read, public-read-write, aws-exec-read, authenticated-read, bucket-owner-read, bucket-owner-full-control, log-delivery-write
+
+  tags = {
+    Name        = "MyTerraformS3Bucket"
+    Environment = "Development"
+  }
+}
+
+# Output the S3 bucket name
+output "s3_bucket_name" {
+  description = "The name of the S3 bucket"
+  value       = aws_s3_bucket.my_terraform_bucket.bucket
+}
+
+# Output the S3 bucket ARN
+output "s3_bucket_arn" {
+  description = "The ARN of the S3 bucket"
+  value       = aws_s3_bucket.my_terraform_bucket.arn
+}
+                </code></pre>
+            </div>
+            <div class="explanation-section-style">
+                <p class="text-lg leading-relaxed mt-4">
+                    <strong>Explanation:</strong>
+                </p>
+                <ul class="list-disc list-inside ml-4 text-lg leading-relaxed mb-4">
+                    <li><code>provider "aws"</code>: Specifies that we are configuring the AWS provider and sets the
+                        default
+                        region.</li>
+                    <li><code>resource "aws_s3_bucket" "my_terraform_bucket"</code>: This block defines an S3 bucket
+                        resource.
+                        <ul>
+                            <li><code>bucket</code>: The unique name for your S3 bucket. Remember, S3 bucket names must
+                                be
+                                globally unique across all AWS accounts.</li>
+                            <li><code>acl</code>: Sets the Access Control List for the bucket. <code>private</code>
+                                means
+                                only the bucket owner has access.</li>
+                            <li><code>tags</code>: Key-value pairs to help organize and identify your AWS resources.
+                            </li>
+                        </ul>
+                    </li>
+                    <li><code>output "s3_bucket_name"</code> and <code>output "s3_bucket_arn"</code>: These blocks
+                        define
+                        output variables that will display the bucket name and ARN after Terraform applies the
+                        configuration.</li>
+                </ul>
+            </div>
+
+            <div class="screenshot-description">
+                <p class="font-semibold">Screenshot Description (AWS S3 Console):</p>
+                <p>After successfully applying the Terraform code, if you navigate to the AWS S3 console, you would see
+                    a new bucket listed with the name "my-unique-terraform-bucket-1234567890" (or whatever unique name
+                    you chose). Its region would be 'us-east-1' (or your chosen region), and its access would be listed
+                    as 'Objects can be public' (if you set <code>acl = "public-read"</code>) or 'Bucket and objects not
+                    public' (if <code>acl = "private"</code>).</p>
+                <p>You would also see the tags 'Name: MyTerraformS3Bucket' and 'Environment: Development' associated
+                    with the bucket in its properties.</p>
+            </div>
+        </section>
+
+        <div class="text-center mt-8 mb-4">
+            <a href="index.html"
+                class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-lg transition duration-300 transform hover:scale-105">
+                ← Back to Home
+            </a>
+        </div>
+    </div>
+
+    <!-- highlight.js library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <!-- Include HCL language definition -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/hcl.min.js"></script>
+    <script>
+        // Function to copy code to clipboard
+        function copyCode(button) {
+            const codeBlock = button.closest('.code-editor-window').querySelector('code');
+            const textToCopy = codeBlock.innerText;
+
+            // Use a temporary textarea to copy text to clipboard
+            const tempTextArea = document.createElement('textarea');
+            tempTextArea.value = textToCopy;
+            document.body.appendChild(tempTextArea);
+            tempTextArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempTextArea);
+
+            // Provide feedback to the user
+            const originalText = button.textContent;
+            button.textContent = 'Copied!';
+            setTimeout(() => {
+                button.textContent = originalText;
+            }, 2000);
+        }
+
+        // Initialize highlight.js after the DOM is loaded
+        document.addEventListener('DOMContentLoaded', (event) => {
+            hljs.highlightAll();
+        });
+    </script>
+</body>
+
+</html>
